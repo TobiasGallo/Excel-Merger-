@@ -26,3 +26,8 @@ Desktop.ini
 # Archivos temporales
 *.tmp
 *.log
+
+
+#Carpetas de datos
+/Documentos/
+/Prueba/
