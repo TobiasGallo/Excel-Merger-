@@ -6,7 +6,7 @@ import pandas as pd
 
 from src.config.state import AppState
 from src.config.constants import (
-    FONTS, FILE_LABELS, MAX_FILES, MAX_KEY_ROWS, MAX_ADD_COLUMNS, MAX_DEL_COLUMNS,
+    FONTS, FILE_LABELS, MIN_FILES, MAX_FILES, MAX_KEY_ROWS, MAX_ADD_COLUMNS, MAX_DEL_COLUMNS,
     FILETYPES_LOAD, FILETYPES_SAVE,
 )
 from src.core.file_io import leer_columnas, leer_dataframe, guardar_dataframe, seleccionar_hoja_dialog
@@ -99,7 +99,7 @@ class ExcelMergerApp:
         self.w_archivos = build_archivos(
             self.content, self.C, self.archivos,
             self._cargar_archivo, self._eliminar_archivo,
-            self._cambiar_hoja, self._agregar_slot_archivo,
+            self._cambiar_hoja, self._agregar_slot_archivo, self._quitar_slot_archivo,
         )
         self.w_claves = build_claves(self.content, self.C)
         self.w_claves["btn_agregar"] = crear_boton(
@@ -188,6 +188,17 @@ class ExcelMergerApp:
             self.num_archivos_visibles.set(n + 1)
             self._actualizar_ui_archivos()
 
+    def _quitar_slot_archivo(self):
+        n = self.num_archivos_visibles.get()
+        if n > MIN_FILES:
+            idx = n - 1
+            self.archivos[idx]["path"].set("")
+            self.archivos[idx]["sheet"] = None
+            self.archivos[idx]["columns"] = []
+            self.num_archivos_visibles.set(n - 1)
+            self._actualizar_columnas()
+            self._actualizar_ui_archivos()
+
     def _actualizar_ui_archivos(self):
         n = self.num_archivos_visibles.get()
         w = self.w_archivos
@@ -205,7 +216,12 @@ class ExcelMergerApp:
         if n >= MAX_FILES:
             w["btn_agregar"].pack_forget()
         else:
-            w["btn_agregar"].pack()
+            w["btn_agregar"].pack(side=LEFT, padx=4)
+
+        if n <= MIN_FILES:
+            w["btn_quitar"].pack_forget()
+        else:
+            w["btn_quitar"].pack(side=LEFT, padx=4)
 
         self._actualizar_claves_ui()
 
@@ -350,26 +366,42 @@ class ExcelMergerApp:
             for i, combo in enumerate(row["combos"]):
                 if i < len(self.archivos) and self.archivos[i]["path"].get():
                     combo['values'] = self.archivos[i]["columns"]
+                    if combo.get() not in self.archivos[i]["columns"]:
+                        combo.set("")
                 else:
                     combo['values'] = []
+                    combo.set("")
 
+        sec_labels = [FILE_LABELS[i] for i in range(1, MAX_FILES) if self.archivos[i]["path"].get()]
         for col_row in self.add_columns:
-            sel = col_row["combo_archivo"].get()
+            combo_arch = col_row["combo_archivo"]
+            combo_arch['values'] = sec_labels
+            if combo_arch.get() not in sec_labels:
+                combo_arch.set("")
+
+            sel = combo_arch.get()
             if sel:
                 for idx, lbl in enumerate(FILE_LABELS):
                     if sel == lbl and self.archivos[idx]["path"].get():
                         col_row["combo_columna"]['values'] = self.archivos[idx]["columns"]
+                        if col_row["combo_columna"].get() not in self.archivos[idx]["columns"]:
+                            col_row["combo_columna"].set("")
                         break
                 else:
                     col_row["combo_columna"]['values'] = []
+                    col_row["combo_columna"].set("")
             else:
                 col_row["combo_columna"]['values'] = []
+                col_row["combo_columna"].set("")
 
         for del_row in self.del_columns:
             if self.archivos[0]["path"].get():
                 del_row["combo_columna"]['values'] = self.archivos[0]["columns"]
+                if del_row["combo_columna"].get() not in self.archivos[0]["columns"]:
+                    del_row["combo_columna"].set("")
             else:
                 del_row["combo_columna"]['values'] = []
+                del_row["combo_columna"].set("")
 
     # ─── Acciones principales ────────────────────────────────────────────────
     def _on_combinar(self):
@@ -440,7 +472,9 @@ class ExcelMergerApp:
         a = self.w_archivos
         a["slots_frame"].configure(bg=C("surface"))
         a["btn_frame"].configure(bg=C("surface"))
+        a["btn_inner"].configure(bg=C("surface"))
         a["btn_agregar"].configure(bg=C("accent"), fg="white", activebackground=C("accent"))
+        a["btn_quitar"].configure(bg=C("danger"), fg="white", activebackground=C("danger"))
 
         for i, w in enumerate(a["widgets"]):
             color = C("file_colors")[i]

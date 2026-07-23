@@ -53,19 +53,6 @@ def mezclar_datos(archivos, key_rows, add_columns, del_columns):
                 "Las columnas clave no tienen el mismo tipo de datos"
             )
 
-        for c in claves_principal:
-            resultado[c] = resultado[c].apply(normalizar_texto)
-        for c in claves_sec:
-            df_sec[c] = df_sec[c].apply(normalizar_texto)
-
-        if df_sec.duplicated(subset=claves_sec).any():
-            messagebox.showwarning(
-                "Advertencia",
-                f"El archivo {FILE_LABELS[sec_idx]} tiene claves duplicadas.\n"
-                "Se conservara el ultimo registro.",
-            )
-            df_sec = df_sec.drop_duplicates(subset=claves_sec, keep='last')
-
         cols_agregar = []
         for col_row in add_columns:
             arch_sel = col_row["combo_archivo"].get()
@@ -73,22 +60,37 @@ def mezclar_datos(archivos, key_rows, add_columns, del_columns):
             if arch_sel == FILE_LABELS[sec_idx] and col_sel:
                 cols_agregar.append(col_sel)
 
-        if cols_agregar:
-            cols_traer = claves_sec + [c for c in cols_agregar if c not in claves_sec]
-            merged = pd.merge(
-                resultado, df_sec[cols_traer],
-                left_on=claves_principal, right_on=claves_sec, how='left',
+        if not cols_agregar:
+            continue
+
+        # Columnas temporales solo para emparejar (normalizadas), asi los
+        # valores originales del Principal y del secundario no se alteran.
+        temp_keys = [f"__key_match_{i}" for i in range(len(claves_principal))]
+        for tcol, c in zip(temp_keys, claves_principal):
+            resultado[tcol] = resultado[c].apply(normalizar_texto)
+        for tcol, c in zip(temp_keys, claves_sec):
+            df_sec[tcol] = df_sec[c].apply(normalizar_texto)
+
+        if df_sec.duplicated(subset=temp_keys).any():
+            messagebox.showwarning(
+                "Advertencia",
+                f"El archivo {FILE_LABELS[sec_idx]} tiene claves duplicadas.\n"
+                "Se conservara el ultimo registro.",
             )
+            df_sec = df_sec.drop_duplicates(subset=temp_keys, keep='last')
 
-            for c in claves_sec:
-                if c not in claves_principal and c in merged.columns:
-                    merged = merged.drop(columns=[c])
+        cols_traer = temp_keys + [c for c in cols_agregar if c not in temp_keys]
+        merged = pd.merge(
+            resultado, df_sec[cols_traer],
+            left_on=temp_keys, right_on=temp_keys, how='left',
+        )
+        merged = merged.drop(columns=temp_keys, errors='ignore')
 
-            for col in cols_agregar:
-                if col in merged.columns:
-                    merged[col] = merged[col].fillna("--")
+        for col in cols_agregar:
+            if col in merged.columns:
+                merged[col] = merged[col].fillna("--")
 
-            resultado = merged
+        resultado = merged
 
     cols_eliminar = []
     for del_row in del_columns:

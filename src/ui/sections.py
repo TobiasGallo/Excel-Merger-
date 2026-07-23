@@ -84,7 +84,8 @@ def build_info(parent, color_fn):
     return {"frame": frame, "title": title, "body": body}
 
 
-def build_archivos(parent, color_fn, archivos, on_cargar, on_eliminar, on_hoja, on_agregar_slot):
+def build_archivos(parent, color_fn, archivos, on_cargar, on_eliminar, on_hoja,
+                   on_agregar_slot, on_quitar_slot):
     """Construye la seccion de carga de archivos.
 
     Args:
@@ -93,6 +94,7 @@ def build_archivos(parent, color_fn, archivos, on_cargar, on_eliminar, on_hoja, 
         on_eliminar: Callback(indice).
         on_hoja: Callback(indice).
         on_agregar_slot: Callback().
+        on_quitar_slot: Callback().
 
     Returns:
         dict con widgets referenciables.
@@ -148,13 +150,21 @@ def build_archivos(parent, color_fn, archivos, on_cargar, on_eliminar, on_hoja, 
     btn_frame = Frame(lf, bg=color_fn("surface"))
     btn_frame.pack(fill=X, pady=(8, 0))
 
-    btn_agregar = crear_boton(btn_frame, "Agregar Archivo", on_agregar_slot,
+    btn_inner = Frame(btn_frame, bg=color_fn("surface"))
+    btn_inner.pack()
+
+    btn_agregar = crear_boton(btn_inner, "Agregar Archivo", on_agregar_slot,
                               color_fn("accent"), width=18)
-    btn_agregar.pack()
+    btn_agregar.pack(side=LEFT, padx=4)
+
+    btn_quitar = crear_boton(btn_inner, "Quitar Archivo", on_quitar_slot,
+                             color_fn("danger"), width=18)
+    btn_quitar.pack(side=LEFT, padx=4)
 
     return {
         "lf": lf, "slots_frame": slots_frame, "widgets": widgets,
-        "separadores": separadores, "btn_frame": btn_frame, "btn_agregar": btn_agregar,
+        "separadores": separadores, "btn_frame": btn_frame, "btn_inner": btn_inner,
+        "btn_agregar": btn_agregar, "btn_quitar": btn_quitar,
     }
 
 

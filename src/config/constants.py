@@ -8,6 +8,7 @@ FONTS = {
 
 FILE_LABELS = ["Principal", "Secundario", "Terciario", "Cuaternario"]
 
+MIN_FILES = 2
 MAX_FILES = 4
 MAX_KEY_ROWS = 3
 MAX_ADD_COLUMNS = 3
